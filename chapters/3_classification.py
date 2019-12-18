@@ -8,6 +8,7 @@ import numpy as np
 
 from sklearn.datasets import fetch_openml
 from sklearn.linear_model import SGDClassifier
+from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import StratifiedKFold, cross_val_score, cross_val_predict
 from sklearn.base import clone, BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
@@ -224,3 +225,60 @@ plt.show()
 
 # %% [markdown]
 # # Multiclass Classification
+# You can actually approach multiclass classification witih binary classifiers by
+# using the following methods:
+#
+# * OvO (one-versus-one): train a binary classifier that distinguishes each class
+#   from each other (e.g. 1s from 2s, 2s from 3s, etc.).
+# * OvR (one-versus-the-rest): train a binary classifier that classifies a single
+#   class, one for each class (e.g. one classifier for 1s, one for 2s, etc.).
+#
+# However, we won't be using these methods in this section.
+
+# %%
+sgd_clf.fit(X_train, y_train)
+sgd_clf.predict([some_digit])
+
+# %%
+# Output one value per each class:
+sgd_clf.decision_function([some_digit])
+
+# %%
+# What's the class with the highest value (same as predict)
+max_index = np.argmax(sgd_clf.decision_function([some_digit]))
+sgd_clf.classes_[max_index]
+
+# %%
+cross_val_score(sgd_clf, X_train, y_train, cv=3, scoring="accuracy")
+
+# %%
+# Let's improve the model by scaling our inputs:
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train.astype(np.float64))
+cross_val_score(sgd_clf, X_train_scaled, y_train, cv=3, scoring="accuracy")
+
+# %%
+y_train_pred = cross_val_predict(sgd_clf, X_train_scaled, y_train, cv=3)
+conf_mx = confusion_matrix(y_train, y_train_pred)
+conf_mx
+
+# %%
+# Plot our confusion matrix so it's actually readable. We want most images to be
+# on the same diagonal, as that shows they were classified properly.
+plt.matshow(conf_mx, cmap=plt.cm.gray)
+plt.show()
+
+# %%
+# Let's focus on the errors
+
+# Divide each value in the confusion matrix by the # of images
+# in the corresponding class to compare error rates.
+row_sums = conf_mx.sum(axis=1, keepdims=True)
+norm_conf_mx = conf_mx / row_sums
+
+# Keep only errors
+np.fill_diagonal(norm_conf_mx, 0)
+
+plt.matshow(norm_conf_mx, cmap=plt.cm.gray)
+plt.show()
+
